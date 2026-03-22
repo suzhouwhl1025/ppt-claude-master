@@ -1,0 +1,23 @@
+{
+  "name": "ppt-master",
+  "id": "ppt-master",
+  "version": "2.2.0",
+  "description": "AI 驱动的多格式 SVG 内容生成系统，将 PDF/URL/Markdown 转换为精美可编辑的 PowerPoint 演示文稿",
+  "author": "hugohe3",
+  "license": "MIT",
+  "category": "演示文稿工具",
+  "tags": ["PPT", "演示文稿", "SVG", "AI", "生成", "设计"],
+  "compatibility": {
+    "minOpenClawVersion": "1.0.0"
+  },
+  "main": "dist/index.js",
+  "metadata": {
+    "pptMaster": {
+      "pythonRequired": true,
+      "pythonVersion": ">=3.8",
+      "skillPath": "./assets/ppt-master-skills",
+      "scriptsPath": "./assets/ppt-master-skills/scripts",
+      "templatesPath": "./assets/ppt-master-skills/templates"
+    }
+  }
+}
