@@ -25,6 +25,28 @@
 | **咨询风格** | 数据清晰优先 | 团队汇报、数据分析 |
 | **顶级咨询** | 逻辑说服优先 | MBB 级别高管汇报 |
 
+### 图片生成 (RunningHub API)
+
+使用 RunningHub API 生成高质量图片：
+
+```typescript
+// 生成图片
+await main(ctx, {
+  action: 'generate_image',
+  prompt: '一只在草地上奔跑的小狗',
+  aspectRatio: '16:9',  // 可选: 1:1, 16:9, 9:16, 4:3, 3:4, 21:9
+  imageSize: '1K',       // 可选: 512px, 1K, 2K, 4K
+  output: './images'    // 输出目录
+});
+
+// 检查账户状态
+await main(ctx, {
+  action: 'check_account'
+});
+```
+
+**注意**: 生成图片需要 RunningHub API Key。如果没有配置，Skill 会自动提示您设置。
+
 ---
 
 ## 工作流程
@@ -140,6 +162,52 @@ pip install PyMuPDF>=1.23.0
 pip install Pillow>=9.0.0
 pip install requests>=2.31.0
 pip install beautifulsoup4>=4.12.0
+```
+
+---
+
+## RunningHub API Key 配置
+
+### 获取 API Key
+
+1. **注册账户**: https://www.runninghub.cn
+2. **创建 API Key**: https://www.runninghub.cn/enterprise-api/sharedApi
+3. **充值余额**: https://www.runninghub.cn/vip-rights/4（API 调用需要余额）
+
+### 配置方式 (三选一)
+
+**方式 1**: 在对话中直接提供
+
+```
+请告诉我您的 RunningHub API Key
+```
+
+**方式 2**: 设置环境变量
+
+```bash
+# Linux/macOS
+export RUNNINGHUB_API_KEY='您的API_KEY'
+
+# Windows (PowerShell)
+$env:RUNNINGHUB_API_KEY='您的API_KEY'
+```
+
+**方式 3**: 安装 runninghub skill（推荐）
+
+安装 [OpenClaw RunningHub Skill](https://github.com/HM-RunningHub/OpenClaw_RH_Skills) 后，API Key 会自动配置。
+
+### 如果未配置 API Key
+
+当您尝试生成图片时，如果未配置 API Key，Skill 会：
+
+1. 显示引导信息，指导您如何获取 API Key
+2. 等待您提供 API Key 或配置环境变量
+3. 不会继续执行后续步骤，确保您了解需要什么
+
+### 检查账户状态
+
+```bash
+python assets/ppt-master-skills/scripts/runninghub_image_gen.py --check
 ```
 
 ---

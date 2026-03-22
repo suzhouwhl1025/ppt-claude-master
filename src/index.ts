@@ -43,6 +43,8 @@ type PPTAction =
   | 'post_process'     // 后处理
   | 'svg_to_pptx'      // SVG 转 PPTX
   | 'validate'         // 验证项目
+  | 'generate_image'   // 生成图片
+  | 'check_account'    // 检查账户状态
   | 'help';            // 显示帮助
 
 /**
@@ -120,6 +122,27 @@ interface HelpParams {
 }
 
 /**
+ * 生成图片参数
+ */
+interface GenerateImageParams {
+  action: 'generate_image';
+  prompt: string;
+  apiKey?: string;
+  output?: string;
+  filename?: string;
+  aspectRatio?: string;
+  imageSize?: string;
+}
+
+/**
+ * 检查账户参数
+ */
+interface CheckAccountParams {
+  action: 'check_account';
+  apiKey?: string;
+}
+
+/**
  * 联合参数类型
  */
 type PPTSkillParams =
@@ -129,6 +152,8 @@ type PPTSkillParams =
   | PostProcessParams
   | SVGToPPTXParams
   | ValidateParams
+  | GenerateImageParams
+  | CheckAccountParams
   | HelpParams;
 
 /**
@@ -166,7 +191,7 @@ const SCRIPT_MAP: Record<string, string> = {
   'svg_to_pptx': 'svg_to_pptx.py',
   'svg_quality_checker': 'svg_quality_checker.py',
   'analyze_images': 'analyze_images.py',
-  'nano_banana_gen': 'nano_banana_gen.py'
+  'runninghub_image_gen': 'runninghub_image_gen.py'
 };
 
 // ============================================================================
@@ -275,6 +300,8 @@ async function showHelp(ctx: SessionContext): Promise<void> {
 | post_process | 后处理 | projectPath |
 | svg_to_pptx | SVG 转 PPTX | projectPath, stage |
 | validate | 验证项目 | projectPath |
+| generate_image | 生成图片 | prompt, apiKey, output, aspectRatio, imageSize |
+| check_account | 检查账户状态 | apiKey (可选) |
 
 ## 使用示例
 
@@ -293,6 +320,20 @@ await main(ctx, {
   name: 'my-ppt',
   format: 'ppt169'
 });
+
+// 生成图片 (需要 RunningHub API Key)
+await main(ctx, {
+  action: 'generate_image',
+  prompt: '一只在草地上奔跑的小狗',
+  aspectRatio: '16:9',
+  imageSize: '1K',
+  output: './images'
+});
+
+// 检查账户状态
+await main(ctx, {
+  action: 'check_account'
+});
 \`\`\`
 
 ## 支持的格式
@@ -308,9 +349,150 @@ await main(ctx, {
 - general: 通用灵活风格
 - consultant: 咨询风格
 - consultant_top: 顶级咨询风格 (MBB级别)
+
+## 图片生成 (RunningHub API)
+
+需要 RunningHub API Key:
+1. 注册: https://www.runninghub.cn
+2. 获取 Key: https://www.runninghub.cn/enterprise-api/sharedApi
+3. 充值: https://www.runninghub.cn/vip-rights/4
+
+支持的图片尺寸: 512px, 1K (1024), 2K (2048), 4K (4096)
+支持的宽高比: 1:1, 16:9, 9:16, 4:3, 3:4, 21:9
 `;
 
   await sendMessage(ctx, helpText);
+}
+
+/**
+ * 显示 API Key 配置提示
+ */
+async function showApiKeyGuide(ctx: SessionContext): Promise<void> {
+  const guide = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ 未找到 RunningHub API Key
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 请按以下步骤获取 API Key:
+
+1️⃣ 访问 https://www.runninghub.cn 注册账户
+
+2️⃣ 访问 https://www.runninghub.cn/enterprise-api/sharedApi
+   创建 API Key
+
+3️⃣ 访问 https://www.runninghub.cn/vip-rights/4
+   充值账户（API 调用需要余额）
+
+📝 配置方式 (三选一):
+
+✅ 方式1: 在对话中提供 API Key
+   请告诉我您的 RunningHub API Key
+
+✅ 方式2: 设置环境变量
+   export RUNNINGHUB_API_KEY='您的KEY'
+
+✅ 方式3: 安装 runninghub skill
+   它会自动配置 API Key
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  await sendMessage(ctx, guide);
+}
+
+/**
+ * 检查账户状态
+ */
+async function checkAccount(
+  ctx: SessionContext,
+  apiKey?: string
+): Promise<{ success: boolean; error?: string }> {
+  await sendMessage(ctx, `🔍 检查账户状态...`);
+
+  const args = ['--check'];
+  if (apiKey) {
+    args.push('--api_key', apiKey);
+  }
+
+  const result = await runPythonScript('runninghub_image_gen', args);
+
+  if (result.exitCode === 0) {
+    await sendMessage(ctx, `✅ 账户状态检查成功\n${result.stdout}`);
+    return { success: true };
+  } else {
+    const errorMsg = result.stderr || result.stdout;
+    if (errorMsg.includes('NO_API_KEY') || errorMsg.includes('未找到')) {
+      await showApiKeyGuide(ctx);
+    } else {
+      await sendMessage(ctx, `❌ 账户检查失败: ${errorMsg}`);
+    }
+    return { success: false, error: errorMsg };
+  }
+}
+
+/**
+ * 生成图片
+ */
+async function generateImage(
+  ctx: SessionContext,
+  params: GenerateImageParams
+): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+  const {
+    prompt,
+    apiKey,
+    output,
+    filename,
+    aspectRatio = '16:9',
+    imageSize = '1K'
+  } = params;
+
+  // 先检查 API Key
+  if (!apiKey) {
+    // 尝试检查是否有可用的 API Key
+    const checkResult = await checkAccount(ctx, undefined);
+    if (!checkResult.success) {
+      // API Key 不可用，引导用户配置
+      return {
+        success: false,
+        error: '需要 RunningHub API Key 才能生成图片'
+      };
+    }
+  }
+
+  await sendMessage(ctx, `🎨 开始生成图片...`);
+  await sendMessage(ctx, `📝 提示词: ${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}`);
+
+  const args: string[] = [prompt];
+
+  if (output) {
+    args.push('--output', output);
+  }
+  if (filename) {
+    args.push('--filename', filename);
+  }
+  args.push('--aspect_ratio', aspectRatio);
+  args.push('--image_size', imageSize);
+
+  if (apiKey) {
+    args.push('--api_key', apiKey);
+  }
+
+  const result = await runPythonScript('runninghub_image_gen', args);
+
+  if (result.exitCode === 0) {
+    const outputPath = result.stdout.match(/图片路径: (.+)/)?.[1] ||
+                       result.stdout.match(/File saved to: (.+)/)?.[1] ||
+                       output || 'images/';
+    await sendMessage(ctx, `✅ 图片生成成功!\n${result.stdout}`);
+    return { success: true, outputPath };
+  } else {
+    const errorMsg = result.stderr || result.stdout;
+    if (errorMsg.includes('NO_API_KEY') || errorMsg.includes('未找到')) {
+      await showApiKeyGuide(ctx);
+    } else {
+      await sendMessage(ctx, `❌ 图片生成失败: ${errorMsg}`);
+    }
+    return { success: false, error: errorMsg };
+  }
 }
 
 /**
@@ -555,6 +737,12 @@ export async function main(
 
     case 'validate':
       return await validateProject(ctx, (params as ValidateParams).projectPath);
+
+    case 'generate_image':
+      return await generateImage(ctx, params as GenerateImageParams);
+
+    case 'check_account':
+      return await checkAccount(ctx, (params as CheckAccountParams).apiKey);
 
     default:
       await sendMessage(ctx, `❌ 未知操作: ${action}`);
