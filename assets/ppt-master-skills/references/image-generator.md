@@ -221,10 +221,14 @@ For each image with "Pending" status:
 
 > Prerequisite: Section 4.2 must be complete; `images/image_prompts.md` must exist
 
-#### Method 1: Nano Banana CLI Tool (Recommended)
+#### Method 1: RunningHub CLI Tool (Recommended)
+
+**Environment Check**: Before generating, ensure `RUNNINGHUB_API_KEY` is configured.
+
+If not configured, the system will display a guide to help you set it up.
 
 ```bash
-python3 scripts/nano_banana_gen.py "your prompt" \
+python3 scripts/runninghub_image_gen.py "your prompt" \
   --aspect_ratio 16:9 --image_size 1K \
   --output project/images --filename cover_bg
 ```
@@ -233,32 +237,41 @@ python3 scripts/nano_banana_gen.py "your prompt" \
 
 | Parameter | Short | Description | Default |
 |-----------|-------|-------------|---------|
-| `prompt` | - | Positive prompt (positional arg) | `Nano Banana` |
+| `prompt` | - | Positive prompt (positional arg) | Required |
+| `--api_key` | `-k` | RunningHub API Key | From env or config |
 | `--negative_prompt` | `-n` | Negative prompt | None |
-| `--aspect_ratio` | - | Image aspect ratio | `1:1` |
-| `--image_size` | - | Size (`1K`/`2K`/`4K`) | `1K` |
+| `--aspect_ratio` | `-r` | Image aspect ratio (`1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `21:9`) | `1:1` |
+| `--image_size` | `-s` | Size (`512px`, `1K`, `2K`, `4K`) | `1K` |
 | `--output` | `-o` | Output directory | Current directory |
 | `--filename` | `-f` | Output filename (no extension) | Auto-named |
 
-**Environment variables**: Required: `GEMINI_API_KEY`. Optional: `GEMINI_BASE_URL`
+**Environment variables**: `RUNNINGHUB_API_KEY` (required)
 
 **Generation pacing (mandatory)**:
 - Execute only one generation command at a time; wait for file confirmation before the next
 - Recommend 2-5 second intervals between images to avoid concurrency failures
 - If failure/no output occurs, halt the queue, check environment variables and output directory, then resume
 
-#### Method 2: Auto-generation
+#### Method 2: Check Account Status
+
+Before batch generation, verify your API key is valid:
+
+```bash
+python3 scripts/runninghub_image_gen.py --check
+```
+
+#### Method 3: Auto-generation
 
 Directly call image generation API, download and save to `project/images/` directory.
 
-#### Method 3: Gemini Web Interface
+#### Method 4: Gemini Web Interface (Legacy)
 
 1. Generate images in [Gemini](https://gemini.google.com/)
 2. Select **Download full size** for high-resolution version
 3. Remove watermark: `python3 scripts/gemini_watermark_remover.py <image_path>`
 4. Place processed images in `project/images/` directory
 
-#### Method 4: Manual Generation (Other AI Platforms)
+#### Method 5: Manual Generation (Other AI Platforms)
 
 Prompts are saved in `images/image_prompts.md`; inform the user of the file location. User generates on Midjourney, DALL-E, Stable Diffusion, etc. and places images in `project/images/` directory.
 
@@ -312,8 +325,11 @@ Abstract futuristic background with flowing digital waves...
 
 ## Usage Instructions
 
-1. Copy the "Prompt" above into an AI image generation tool
-2. Recommended platforms: Midjourney / DALL-E 3 / Gemini / Stable Diffusion
+1. **Recommended**: Use the RunningHub CLI tool to generate images
+   ```bash
+   python3 scripts/runninghub_image_gen.py "your prompt" --aspect_ratio 16:9 --image_size 1K -o project/images
+   ```
+2. Alternative: Copy the "Prompt" above into other AI image generation tools (Midjourney / DALL-E 3 / Stable Diffusion)
 3. Rename generated images to the corresponding filenames
 4. Place in the `images/` directory
 ```
