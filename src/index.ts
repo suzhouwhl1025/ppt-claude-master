@@ -191,7 +191,8 @@ const SCRIPT_MAP: Record<string, string> = {
   'svg_to_pptx': 'svg_to_pptx.py',
   'svg_quality_checker': 'svg_quality_checker.py',
   'analyze_images': 'analyze_images.py',
-  'runninghub_image_gen': 'runninghub_image_gen.py'
+  'runninghub_image_gen': 'runninghub_image_gen.py',
+  'resize_images': 'resize_images.py'
 };
 
 // ============================================================================

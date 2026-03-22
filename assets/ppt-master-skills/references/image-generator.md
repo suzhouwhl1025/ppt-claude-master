@@ -275,7 +275,64 @@ Directly call image generation API, download and save to `project/images/` direc
 
 Prompts are saved in `images/image_prompts.md`; inform the user of the file location. User generates on Midjourney, DALL-E, Stable Diffusion, etc. and places images in `project/images/` directory.
 
-### 4.4 Verification Phase
+### 4.4 Image Size Verification & Resize
+
+> **Important**: RunningHub 生成的图片尺寸可能与预期不一致。为了防止图片破坏 PPT 布局，必须在嵌入 SVG 前进行尺寸校验和缩放。
+
+After generating images (any method), **MUST** perform size verification:
+
+#### Step 1: Check Image Sizes
+
+```bash
+# 检查单张图片尺寸
+python3 scripts/resize_images.py image.png -w 1920 -h 1080 --check-only
+```
+
+#### Step 2: Resize if Needed
+
+```bash
+# 缩放到目标尺寸 (完整放入模式，留白填充)
+python3 scripts/resize_images.py image.png -w 1920 -h 1080 --mode fit
+
+# 缩放到目标尺寸 (填满模式，可能裁剪)
+python3 scripts/resize_images.py image.png -w 1920 -h 1080 --mode fill
+```
+
+#### Parameters:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-w` | Target width (pixels) | Required |
+| `-h` | Target height (pixels) | Required |
+| `--mode fit` | Fit into target area (adds white background if needed) | Default |
+| `--mode fill` | Fill target area (may crop) | - |
+| `--check-only` | Only check size, don't resize | False |
+
+#### Size Requirements by Canvas Format:
+
+| Canvas Format | Background Size | Resolution |
+|--------------|-----------------|-------------|
+| PPT 16:9 | 1920x1080 | 1280x720 (SVG viewBox) |
+| PPT 4:3 | 1600x1200 | 1024x768 (SVG viewBox) |
+| Xiaohongshu | 1242x1660 | 1242x1660 |
+| WeChat Moments | 1080x1080 | 1080x1080 |
+| Story | 1080x1920 | 1080x1920 |
+
+#### Example Workflow:
+
+```bash
+# 1. Generate image
+python3 scripts/runninghub_image_gen.py "futuristic city background" \
+  --output ./images --filename cover_bg --aspect_ratio 16:9 --image_size 2K
+
+# 2. Verify size (expected: 2048x1152 for 2K 16:9)
+python3 scripts/resize_images.py ./images/cover_bg.png -w 1920 -h 1080 --check-only
+
+# 3. Resize if needed
+python3 scripts/resize_images.py ./images/cover_bg.png -w 1920 -h 1080 --mode fit
+```
+
+### 4.5 Verification Phase
 
 - Confirm all images are saved to `images/` directory
 - Check filenames match the resource list
